@@ -1,0 +1,18 @@
+# --- Secrets: never commit your real configuration ---
+config.json
+*.pfx
+*.pem
+*.key
+
+# --- Generated reports (contain tenant data: device names, serials, users, object IDs) ---
+reports/*
+!reports/.gitkeep
+
+# --- OS / editor clutter ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.tmp
+testResults.xml

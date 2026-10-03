@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  powershell:
+    name: Lint and test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Parse every script
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors) { $failed = $true; Write-Host "Parse errors in $($_.FullName)"; $errors | Format-List }
+          }
+          if ($failed) { exit 1 }
+
+      - name: PSScriptAnalyzer (errors)
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          $results | Format-Table -AutoSize
+          if ($results) { exit 1 }
+
+      - name: Pester on PowerShell 7
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+      - name: Pester on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -MinimumVersion 5.5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  web:
+    name: Template and repository checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax-check the report template JavaScript
+        run: |
+          node -e "
+          const fs=require('fs');
+          const html=fs.readFileSync('templates/report-template.html','utf8');
+          if(html.split('__REPORT_DATA__').length!==2){console.error('Placeholder must appear exactly once');process.exit(1);}
+          const js=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n');
+          fs.writeFileSync('template.js',js);"
+          node --check template.js
+      - name: Validate config.example.json
+        run: node -e "JSON.parse(require('fs').readFileSync('config.example.json','utf8'))"
+      - name: Make sure no config or secrets are committed
+        run: |
+          test ! -f config.json || (echo "config.json must not be committed" && exit 1)
+          ! grep -rInE '[A-Za-z0-9_~.-]{3}[0-9]Q~[A-Za-z0-9_~.-]{31,}' --exclude-dir=.git . || (echo "Possible Entra client secret found" && exit 1)

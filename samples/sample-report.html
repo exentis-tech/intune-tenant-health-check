@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intune report</title>
+<style>
+:root {
+  --canvas: #f2f3f5;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --ink: #1b1f27;
+  --muted: #5b6270;
+  --line: #e1e4e9;
+  --brand: #8f1d2a;
+  --critical: #b42318;
+  --critical-bg: #fdecea;
+  --warning: #a15c07;
+  --warning-bg: #fdf3e2;
+  --error: #6941c6;
+  --error-bg: #f1ecfd;
+  --info: #3e4c63;
+  --info-bg: #eceff4;
+  --ok: #0e7a4b;
+  --ok-bg: #e6f4ed;
+  --radius-lg: 10px;
+  --radius-sm: 5px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #15171c;
+    --surface: #1d2027;
+    --surface-2: #23272f;
+    --ink: #e9ebef;
+    --muted: #a0a7b4;
+    --line: #333844;
+    --brand: #e0606d;
+    --critical: #f97066;
+    --critical-bg: #3a1d1d;
+    --warning: #f5b051;
+    --warning-bg: #36291a;
+    --error: #b69cf5;
+    --error-bg: #2b2440;
+    --info: #b3bdcc;
+    --info-bg: #2a2f39;
+    --ok: #47cd89;
+    --ok-bg: #19302a;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+a { color: var(--brand); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 3px; }
+.page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 64px; }
+
+/* Masthead */
+.masthead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.tool { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.mark { width: 26px; height: 26px; border-radius: 6px; background: var(--brand); position: relative; flex: none; }
+.mark::before, .mark::after { content: ""; position: absolute; left: 6px; right: 6px; height: 3px; border-radius: 2px; background: #fff; }
+.mark::before { top: 8px; right: 9px; }
+.mark::after { top: 15px; }
+.meta { color: var(--muted); font-size: 13px; text-align: right; }
+.meta div { white-space: nowrap; }
+
+/* Verdict */
+.verdict { margin: 34px 0 26px; max-width: 70ch; }
+.verdict h1 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.15; letter-spacing: -0.015em; font-weight: 600; margin: 0 0 10px; }
+.verdict p { margin: 0; color: var(--muted); font-size: 16px; }
+
+.bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--line); gap: 2px; }
+.bar span { display: block; min-width: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 14px; }
+.legend li { display: flex; align-items: center; gap: 7px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend b { font-variant-numeric: tabular-nums; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; margin: 28px 0 34px; }
+.facts div { background: var(--surface); padding: 12px 16px; }
+.facts dt { color: var(--muted); font-size: 13px; }
+.facts dd { margin: 2px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Findings index */
+h2.index-title { font-size: 18px; margin: 0 0 10px; }
+.index { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 36px; }
+.index td { padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.index tr:first-child td { border-top: 0; }
+.index td.count { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; width: 90px; }
+.index td.sev { width: 120px; }
+.index a { color: inherit; text-decoration: none; font-weight: 500; }
+.index a:hover { color: var(--brand); text-decoration: underline; }
+
+/* Status pill */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 1px 9px 1px 7px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.s-critical { color: var(--critical); background: var(--critical-bg); }
+.s-warning { color: var(--warning); background: var(--warning-bg); }
+.s-error { color: var(--error); background: var(--error-bg); }
+.s-info { color: var(--info); background: var(--info-bg); }
+.s-ok { color: var(--ok); background: var(--ok-bg); }
+
+/* Sections */
+.finding { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--info); border-radius: var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-sm); margin: 0 0 18px; padding: 20px 22px 18px; scroll-margin-top: 16px; }
+.finding.sev-critical { border-left-color: var(--critical); }
+.finding.sev-warning { border-left-color: var(--warning); }
+.finding.sev-error { border-left-color: var(--error); }
+.finding.sev-ok { border-left-color: var(--ok); }
+.finding-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.finding h2 { font-size: 19px; margin: 0; letter-spacing: -0.005em; }
+.finding .count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+.finding .desc { margin: 6px 0 0; max-width: 78ch; }
+.finding .todo { margin: 10px 0 0; max-width: 78ch; padding: 10px 14px; background: var(--surface-2); border-radius: var(--radius-sm); font-size: 14px; }
+.finding .todo b { font-weight: 600; }
+.finding .empty { margin: 10px 0 0; color: var(--ok); font-weight: 500; }
+
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0 10px; }
+.toolbar input[type=search] { flex: 1 1 240px; max-width: 360px; font: inherit; font-size: 14px; padding: 7px 11px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); }
+.toolbar .shown { color: var(--muted); font-size: 13px; margin-right: auto; font-variant-numeric: tabular-nums; }
+button { font: inherit; font-size: 13.5px; font-weight: 600; padding: 7px 13px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--muted); }
+
+.table-wrap { overflow: auto; max-height: 560px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table.data th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
+table.data th button { all: unset; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+table.data th button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+table.data th .arrow { color: var(--muted); font-size: 11px; min-width: 9px; }
+table.data td { padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.data tr:last-child td { border-bottom: 0; }
+table.data tbody tr:hover td { background: var(--surface-2); }
+td.t-number, td.t-days, th.t-number, th.t-days { text-align: right; }
+td.t-id { font-size: 12px; color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.t-date { white-space: nowrap; }
+td.t-date small { display: block; color: var(--muted); font-size: 12px; }
+td.t-text.wide { min-width: 260px; }
+table.data td:first-child { min-width: 150px; font-weight: 500; }
+.toolbar.compact { margin: 12px 0 8px; }
+.toolbar.compact button { padding: 4px 10px; font-size: 12.5px; }
+.none { color: var(--muted); }
+.more { margin-top: 10px; }
+
+.notes { margin: 30px 0 0; padding: 16px 20px; border: 1px dashed var(--line); border-radius: var(--radius-lg); color: var(--muted); font-size: 14px; }
+.notes ul { margin: 6px 0 0; padding-left: 20px; }
+footer { margin-top: 36px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 640px) {
+  .page { padding: 20px 14px 48px; }
+  .meta { text-align: left; }
+  .finding { padding: 16px 14px; }
+  .index td.sev { width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media print {
+  :root { --canvas: #fff; --surface: #fff; --surface-2: #f5f5f5; --ink: #000; --muted: #444; --line: #ccc; color-scheme: light; }
+  .toolbar, .more { display: none !important; }
+  .table-wrap { max-height: none; overflow: visible; }
+  .finding { break-inside: avoid-page; }
+}
+</style>
+</head>
+<body>
+<div class="page" id="app">
+  <noscript><p>This report needs JavaScript to display. The same data is available in report.json next to this file.</p></noscript>
+</div>
+
+<script id="report-data" type="application/json">{"tool":{"name":"Intune Tenant Health Check","version":"1.0.0","url":"https://github.com/exentis-tech/intune-tenant-health-check"},"generatedUtc":"2026-10-03T09:14:00Z","tenant":"1a2b3c4d...","headline":"2 critical issues and 7 warnings need attention.","subhead":"26 items checked across Apple and Android enrollment, connectors, tenant settings, app credentials, policy hygiene and device posture.","bar":[{"label":"Critical","value":2,"tone":"critical"},{"label":"Warning","value":7,"tone":"warning"},{"label":"Couldn't check","value":0,"tone":"error"},{"label":"Review","value":8,"tone":"info"},{"label":"OK","value":9,"tone":"ok"}],"facts":[{"label":"Managed devices","value":1204},{"label":"App registrations reviewed","value":87},{"label":"Policies and apps reviewed","value":164},{"label":"Graph requests","value":31}],"indexTitle":"Checks","sections":[{"id":"apple","title":"Apple enrollment and apps","severity":"critical","unit":"item","description":"The MDM push certificate and Apple tokens expire every year. If the push certificate expires, Intune can no longer manage any Apple device.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Item","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"detail","label":"Detail","type":"text","wide":true},{"key":"expires","label":"Expires","type":"date"},{"key":"lastSync","label":"Last sync","type":"date"},{"key":"action","label":"What to do","type":"text","wide":true}],"rows":[{"item":"Apple MDM push certificate","status":"warning","detail":"Expires in 19 days. Apple ID: mdm-admin@contoso.example.","expires":"2026-10-22T12:14:00Z","action":"Renew it in Intune (Devices \u003e Enrollment \u003e Apple \u003e MDM Push Certificate) with the SAME Apple ID. Creating a new certificate instead forces every Apple device to re-enroll."},{"item":"ADE token: Contoso ABM","status":"ok","detail":"Expires in 212 days. Last successful sync 6 hours ago. Apple ID: abm@contoso.example.","expires":"2027-05-03T09:14:00Z","lastSync":"2026-10-03T03:14:00Z","action":"No action needed."},{"item":"VPP token: Contoso Ltd","status":"critical","detail":"Expired 4 days ago. State: expired. Last sync: failed. Apple ID: vpp@contoso.example.","expires":"2026-09-29T09:14:00Z","lastSync":"2026-09-29T07:14:00Z","action":"Download a new location token from Apple Business Manager and upload it to the existing token in Intune."}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"android","title":"Android Enterprise","severity":"ok","unit":"item","description":"The Managed Google Play connection is required to manage Android Enterprise devices and deploy Google Play apps.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Item","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"detail","label":"Detail","type":"text","wide":true},{"key":"expires","label":"Expires","type":"date"},{"key":"lastSync","label":"Last sync","type":"date"},{"key":"action","label":"What to do","type":"text","wide":true}],"rows":[{"item":"Managed Google Play","status":"ok","detail":"Binding: boundAndValidated. Last app sync: success. Connected by intune-admin@contoso.example.","lastSync":"2026-10-02T22:14:00Z","action":"No action needed."}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"connectors","title":"Connectors and sync","severity":"warning","unit":"item","description":"Services that feed Intune: threat defense, certificate connectors and the Windows Autopilot sync.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Item","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"detail","label":"Detail","type":"text","wide":true},{"key":"expires","label":"Expires","type":"date"},{"key":"lastSync","label":"Last sync","type":"date"},{"key":"action","label":"What to do","type":"text","wide":true}],"rows":[{"item":"Microsoft Defender for Endpoint","status":"ok","detail":"State: enabled. Last heartbeat 2 hours ago.","lastSync":"2026-10-03T07:14:00Z","action":"No action needed."},{"item":"Certificate connector: PKI-NDES01","status":"warning","detail":"State: active. Last connection 3 days ago.","lastSync":"2026-09-30T09:14:00Z","action":"Check the Intune Certificate Connector service on the server and its event log."},{"item":"Windows Autopilot sync","status":"ok","detail":"Last sync status: completed.","lastSync":"2026-10-03T00:14:00Z","action":"No action needed."}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"tenant-settings","title":"Tenant settings","severity":"warning","unit":"item","description":"Tenant-wide settings that quietly weaken compliance when left at their defaults.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Setting","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"detail","label":"Current state","type":"text","wide":true},{"key":"action","label":"What to do","type":"text","wide":true}],"rows":[{"item":"Intune subscription","status":"ok","detail":"Subscription state: active.","action":"No action needed."},{"item":"Devices with no compliance policy","status":"warning","detail":"Marked as compliant. A device with no compliance policy assigned passes device-based Conditional Access.","action":"In Endpoint security \u003e Device compliance \u003e Compliance policy settings, set 'Mark devices with no compliance policy assigned as' to Not compliant (test the impact first)."},{"item":"Compliance status validity period","status":"ok","detail":"Devices that do not check in for 30 days are marked non-compliant.","action":"No action needed."}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"app-credentials","title":"App registration secrets and certificates","severity":"critical","unit":"item","description":"Client secrets and certificates that expired or expire within 30 days. When an app's last valid credential expires, the integration that uses it stops working.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"App registration","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"detail","label":"Detail","type":"text","wide":true},{"key":"expires","label":"Expires","type":"date"},{"key":"action","label":"What to do","type":"text","wide":true},{"key":"appId","label":"Application ID","type":"id"}],"rows":[{"item":"ServiceNow Intune integration","status":"critical","detail":"Client secret 'prod-2025' expires in 5 days and no replacement exists.","expires":"2026-10-08T09:14:00Z","action":"Create a new credential, update the app or script that uses it, then remove the old one.","appId":"fffc0920-d8c2-6688-5a24-a0fae7f29ab1"},{"item":"Device cleanup automation","status":"warning","detail":"Client secret 'runbook' expires in 23 days and no replacement exists.","expires":"2026-10-26T09:14:00Z","action":"Create a new credential, update the app or script that uses it, then remove the old one.","appId":"1902bac1-2e81-4a9e-1d7f-e9a54558ee16"},{"item":"Legacy reporting","status":"warning","detail":"Certificate 'CN=reporting' expired 61 days ago. No valid credential remains.","expires":"2026-08-03T09:14:00Z","action":"If the app is still used, add a new credential. If not, consider deleting the app registration.","appId":"9be1f820-bbea-381c-b66c-0a5bad6b4d7f"},{"item":"HR provisioning","status":"info","detail":"Client secret 'old' expires in 12 days. A newer credential is already in place.","expires":"2026-10-15T09:14:00Z","action":"Remove the old credential once everything uses the new one.","appId":"6797f497-0a3d-9bc8-2979-32b56e428d63"}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"policy-hygiene","title":"Unassigned policies and apps","severity":"info","unit":"item","description":"Configuration profiles, settings catalog policies, compliance policies and apps that are not assigned to anyone, and policies that share a name.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Name","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"type","label":"Type","type":"text"},{"key":"detail","label":"Detail","type":"text","wide":true},{"key":"lastModified","label":"Last modified","type":"date"},{"key":"action","label":"What to do","type":"text","wide":true}],"rows":[{"item":"Win - BitLocker (old)","status":"info","type":"Configuration profile","detail":"Not assigned to any group.","lastModified":"2025-10-28T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"iOS - Wi-Fi Guest TEST","status":"info","type":"Configuration profile","detail":"Not assigned to any group.","lastModified":"2026-03-28T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"Win11 - Edge baseline v2","status":"info","type":"Settings catalog policy","detail":"Not assigned to any group.","lastModified":"2025-08-10T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"Android - Compliance pilot","status":"info","type":"Compliance policy","detail":"Not assigned to any group.","lastModified":"2026-07-25T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"Zoom Workplace","status":"info","type":"App","detail":"Not assigned to any group.","lastModified":"2025-02-15T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"Adobe Reader 2023","status":"info","type":"App","detail":"Not assigned to any group.","lastModified":"2025-10-20T09:14:00Z","action":"Assign it, or delete it if it is no longer needed."},{"item":"Win - Defender AV","status":"info","type":"Settings catalog policy","detail":"Name shared by 2 policies.","lastModified":null,"action":"Rename or consolidate so admins can tell them apart."}],"defaultSort":{"key":"status","dir":"desc"}},{"id":"device-posture","title":"Device compliance posture","severity":"warning","unit":"item","description":"Compliance by platform. 'Inactive' counts devices with no check-in for 30 days; the Intune Stale Device Report lists them.","emptyText":"Nothing to report.","columns":[{"key":"item","label":"Platform","type":"text"},{"key":"status","label":"Status","type":"status"},{"key":"total","label":"Devices","type":"number"},{"key":"compliant","label":"Compliant","type":"number"},{"key":"nonCompliant","label":"Not compliant","type":"number"},{"key":"grace","label":"In grace period","type":"number"},{"key":"inactive","label":"Inactive","type":"number"},{"key":"detail","label":"Detail","type":"text","wide":true}],"rows":[{"item":"Windows","status":"ok","total":812,"compliant":748,"nonCompliant":41,"grace":9,"inactive":58,"detail":"5% non-compliant"},{"item":"iOS","status":"warning","total":298,"compliant":252,"nonCompliant":39,"grace":3,"inactive":21,"detail":"13.1% non-compliant"},{"item":"Android","status":"ok","total":61,"compliant":58,"nonCompliant":2,"grace":0,"inactive":6,"detail":"3.3% non-compliant"},{"item":"macOS","status":"ok","total":33,"compliant":31,"nonCompliant":1,"grace":1,"inactive":2,"detail":"3% non-compliant"},{"item":"Windows 10 (end of support)","status":"warning","total":74,"compliant":61,"nonCompliant":11,"grace":2,"inactive":17,"detail":"Windows 10 reached end of support on 14 October 2025. Upgrade to Windows 11 or confirm these devices are covered by Extended Security Updates."}],"defaultSort":{"key":"status","dir":"desc"}}],"notes":["Expiry thresholds: warning within 30 days, critical within 7 days. Change them in config.json.","Some checks use the Microsoft Graph beta endpoint, which Microsoft can change without notice.","This sample report uses invented data."]}</script>
+<script>
+(function () {
+  "use strict";
+  var data;
+  try { data = JSON.parse(document.getElementById("report-data").textContent); }
+  catch (e) { document.getElementById("app").innerHTML = "<p>Could not read the report data: " + esc(e.message) + "</p>"; return; }
+
+  var RANK = { critical: 5, error: 4, warning: 3, info: 2, ok: 1 };
+  var LABEL = { critical: "Critical", error: "Couldn't check", warning: "Warning", info: "Review", ok: "OK" };
+  var TONE_VAR = { critical: "--critical", warning: "--warning", error: "--error", info: "--info", ok: "--ok" };
+  var ROW_LIMIT = 500;
+  var now = data.generatedUtc ? new Date(data.generatedUtc) : new Date();
+
+  function esc(v) {
+    return String(v === null || v === undefined ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function num(n) { return (typeof n === "number") ? n.toLocaleString("en-US") : esc(n); }
+  function pill(s) { s = RANK[s] ? s : "info"; return '<span class="pill s-' + s + '">' + LABEL[s] + "</span>"; }
+  function plural(n, word) { return num(n) + " " + word + (n === 1 ? "" : "s"); }
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function fmtDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return esc(iso); }
+    return d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  }
+  function relative(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return ""; }
+    var diff = d.getTime() - now.getTime(), abs = Math.abs(diff), text;
+    if (abs < 3600000) { return "within the hour"; }
+    if (abs < 86400000) { text = plural(Math.floor(abs / 3600000), "hour"); }
+    else { text = plural(Math.floor(abs / 86400000), "day"); }
+    return diff > 0 ? "in " + text : text + " ago";
+  }
+
+  function cell(col, row) {
+    var v = row[col.key];
+    var type = col.type || "text";
+    var empty = v === null || v === undefined || v === "";
+    if (type === "status") { return pill(v); }
+    if (empty) { return '<span class="none">' + (col.never ? "Never" : "&ndash;") + "</span>"; }
+    if (type === "date") { return fmtDate(v) + "<small>" + relative(v) + "</small>"; }
+    if (type === "bool") { return v ? "Yes" : "No"; }
+    if (type === "number" || type === "days") { return num(v); }
+    if (type === "id") { return '<span title="' + esc(v) + '">' + esc(v) + "</span>"; }
+    return esc(v);
+  }
+
+  function sortValue(col, row) {
+    var v = row[col.key];
+    if (col.type === "status") { return RANK[v] || 0; }
+    if (v === null || v === undefined || v === "") { return null; }
+    if (col.type === "date") { return new Date(v).getTime(); }
+    if (col.type === "bool") { return v ? 1 : 0; }
+    return v;
+  }
+
+  function sectionHtml(s, i) {
+    var sev = RANK[s.severity] ? s.severity : "info";
+    var rows = s.rows || [];
+    var h = '<section class="finding sev-' + sev + '" id="' + esc(s.id || ("s" + i)) + '">';
+    h += '<div class="finding-head"><h2>' + esc(s.title) + "</h2>";
+    h += '<span class="count">' + (rows.length ? plural(rows.length, s.unit || "item") : "") + " " + pill(sev) + "</span></div>";
+    if (s.description) { h += '<p class="desc">' + esc(s.description) + "</p>"; }
+    if (!rows.length) {
+      h += '<p class="empty">' + esc(s.emptyText || "Nothing found.") + "</p></section>";
+      return h;
+    }
+    if (s.recommendation) { h += '<p class="todo"><b>What to do: </b>' + esc(s.recommendation) + "</p>"; }
+    var small = rows.length <= 8;
+    h += '<div class="toolbar' + (small ? ' compact' : '') + '">';
+    if (!small) { h += '<input type="search" placeholder="Filter rows" aria-label="Filter ' + esc(s.title) + '" data-filter="' + i + '">'; }
+    h += '<span class="shown" data-shown="' + i + '"></span>';
+    h += '<button type="button" data-csv="' + i + '">Download CSV</button></div>';
+    h += '<div class="table-wrap"><table class="data"><thead><tr>';
+    (s.columns || []).forEach(function (c, ci) {
+      h += '<th class="t-' + esc(c.type || "text") + '" scope="col"><button type="button" data-sort="' + i + ":" + ci + '">' + esc(c.label) + '<span class="arrow"></span></button></th>';
+    });
+    h += '</tr></thead><tbody data-body="' + i + '"></tbody></table></div>';
+    h += '<button type="button" class="more" data-more="' + i + '" hidden></button>';
+    h += "</section>";
+    return h;
+  }
+
+  var state = [];
+
+  function renderRows(i) {
+    var s = data.sections[i], st = state[i];
+    var q = st.filter.toLowerCase();
+    var rows = (s.rows || []).filter(function (r) {
+      if (!q) { return true; }
+      return (s.columns || []).some(function (c) { var v = r[c.key]; return v !== null && v !== undefined && String(v).toLowerCase().indexOf(q) !== -1; });
+    });
+    if (st.sortCol !== null) {
+      var col = s.columns[st.sortCol], dir = st.sortDir;
+      rows = rows.slice().sort(function (a, b) {
+        var x = sortValue(col, a), y = sortValue(col, b);
+        if (x === null && y === null) { return 0; }
+        if (x === null) { return 1; }
+        if (y === null) { return -1; }
+        if (typeof x === "string" || typeof y === "string") { return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir; }
+        return (x - y) * dir;
+      });
+    }
+    st.visible = rows;
+    var limit = st.showAll ? rows.length : Math.min(rows.length, ROW_LIMIT);
+    var html = "";
+    for (var r = 0; r < limit; r++) {
+      html += "<tr>";
+      (s.columns || []).forEach(function (c) {
+        var wide = (c.type || "text") === "text" && c.wide ? " wide" : "";
+        html += '<td class="t-' + esc(c.type || "text") + wide + '">' + cell(c, rows[r]) + "</td>";
+      });
+      html += "</tr>";
+    }
+    if (!rows.length) { html = '<tr><td colspan="' + (s.columns || []).length + '" class="none">No rows match the filter.</td></tr>'; }
+    document.querySelector('[data-body="' + i + '"]').innerHTML = html;
+    var total = (s.rows || []).length;
+    document.querySelector('[data-shown="' + i + '"]').textContent =
+      (rows.length === total ? "" : num(rows.length) + " of ") + plural(total, "row") + (limit < rows.length ? ", showing first " + num(limit) : "");
+    var more = document.querySelector('[data-more="' + i + '"]');
+    if (limit < rows.length) { more.hidden = false; more.textContent = "Show all " + num(rows.length) + " rows"; } else { more.hidden = true; }
+    document.querySelectorAll('[data-sort^="' + i + ':"]').forEach(function (b) {
+      var ci = Number(b.getAttribute("data-sort").split(":")[1]);
+      b.querySelector(".arrow").textContent = st.sortCol === ci ? (st.sortDir === 1 ? "\u25B2" : "\u25BC") : "";
+      b.parentNode.setAttribute("aria-sort", st.sortCol === ci ? (st.sortDir === 1 ? "ascending" : "descending") : "none");
+    });
+  }
+
+  function downloadCsv(i) {
+    var s = data.sections[i], cols = s.columns || [];
+    var rows = state[i].visible || s.rows || [];
+    function q(v) { v = (v === null || v === undefined) ? "" : String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    var lines = [cols.map(function (c) { return q(c.label); }).join(",")];
+    rows.forEach(function (r) { lines.push(cols.map(function (c) { return q(r[c.key]); }).join(",")); });
+    var blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (s.id || ("section-" + i)) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  // ----- Page -----
+  var sections = data.sections || [];
+  var tool = data.tool || {};
+  document.title = (tool.name || "Intune report") + (data.generatedUtc ? " - " + fmtDate(data.generatedUtc) : "");
+
+  var h = '<header class="masthead"><div class="tool"><span class="mark" aria-hidden="true"></span>' + esc(tool.name || "Intune report") + "</div>";
+  h += '<div class="meta">';
+  if (data.generatedUtc) {
+    var g = new Date(data.generatedUtc);
+    h += "<div>Generated " + fmtDate(data.generatedUtc) + ", " + g.toISOString().substr(11, 5) + " UTC</div>";
+  }
+  if (data.tenant) { h += "<div>Tenant " + esc(data.tenant) + "</div>"; }
+  h += "</div></header>";
+
+  h += '<div class="verdict"><h1>' + esc(data.headline || "") + "</h1>";
+  if (data.subhead) { h += "<p>" + esc(data.subhead) + "</p>"; }
+  h += "</div>";
+
+  var bar = (data.bar || []).filter(function (b) { return b.value > 0; });
+  if (bar.length) {
+    var total = bar.reduce(function (a, b) { return a + b.value; }, 0);
+    h += '<div class="bar" role="img" aria-label="' + esc(bar.map(function (b) { return b.label + ": " + b.value; }).join(", ")) + '">';
+    bar.forEach(function (b) { h += '<span style="flex:' + b.value + ";background:var(" + (TONE_VAR[b.tone] || "--info") + ')" title="' + esc(b.label + ": " + b.value) + '"></span>'; });
+    h += '</div><ul class="legend">';
+    bar.forEach(function (b) {
+      var pct = total ? Math.round(b.value / total * 100) : 0;
+      h += '<li><i style="background:var(' + (TONE_VAR[b.tone] || "--info") + ')"></i>' + esc(b.label) + " <b>" + num(b.value) + "</b> <span class=\"none\">(" + pct + "%)</span></li>";
+    });
+    h += "</ul>";
+  }
+
+  if ((data.facts || []).length) {
+    h += '<dl class="facts">';
+    data.facts.forEach(function (f) { h += "<div><dt>" + esc(f.label) + "</dt><dd>" + num(f.value) + "</dd></div>"; });
+    h += "</dl>";
+  }
+
+  if (sections.length) {
+    var ordered = sections.map(function (s, i) { return { s: s, i: i }; });
+    h += '<h2 class="index-title">' + esc(data.indexTitle || "Findings") + '</h2><table class="index"><tbody>';
+    ordered.forEach(function (o) {
+      var n = (o.s.rows || []).length;
+      h += '<tr><td class="sev">' + pill(o.s.severity) + '</td><td><a href="#' + esc(o.s.id || ("s" + o.i)) + '">' + esc(o.s.title) + '</a></td><td class="count">' + (n ? num(n) : '<span class="none">0</span>') + "</td></tr>";
+    });
+    h += "</tbody></table>";
+  }
+
+  sections.forEach(function (s, i) { h += sectionHtml(s, i); state[i] = { filter: "", sortCol: null, sortDir: 1, showAll: false, visible: null }; });
+
+  if ((data.notes || []).length) {
+    h += '<div class="notes"><b>Notes</b><ul>';
+    data.notes.forEach(function (n) { h += "<li>" + esc(n) + "</li>"; });
+    h += "</ul></div>";
+  }
+
+  h += "<footer><span>" + esc(tool.name || "") + (tool.version ? " v" + esc(tool.version) : "") + ". Read-only scan: nothing in your tenant was changed.</span>";
+  if (tool.url) { h += '<a href="' + esc(tool.url) + '">' + esc(tool.url.replace(/^https?:\/\//, "")) + "</a>"; }
+  h += "</footer>";
+
+  document.getElementById("app").innerHTML = h;
+
+  sections.forEach(function (s, i) {
+    if (!(s.rows || []).length) { return; }
+    var def = s.defaultSort;
+    if (def && s.columns) {
+      s.columns.forEach(function (c, ci) { if (c.key === def.key) { state[i].sortCol = ci; state[i].sortDir = def.dir === "asc" ? 1 : -1; } });
+    }
+    renderRows(i);
+  });
+
+  document.addEventListener("input", function (e) {
+    var i = e.target.getAttribute && e.target.getAttribute("data-filter");
+    if (i === null || i === undefined) { return; }
+    state[i].filter = e.target.value; renderRows(Number(i));
+  });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target.closest("button") : null;
+    if (!t) { return; }
+    if (t.hasAttribute("data-sort")) {
+      var p = t.getAttribute("data-sort").split(":"), i = Number(p[0]), ci = Number(p[1]);
+      if (state[i].sortCol === ci) { state[i].sortDir = -state[i].sortDir; } else { state[i].sortCol = ci; state[i].sortDir = 1; }
+      renderRows(i);
+    } else if (t.hasAttribute("data-csv")) {
+      downloadCsv(Number(t.getAttribute("data-csv")));
+    } else if (t.hasAttribute("data-more")) {
+      var m = Number(t.getAttribute("data-more")); state[m].showAll = true; renderRows(m);
+    }
+  });
+})();
+</script>
+</body>
+</html>

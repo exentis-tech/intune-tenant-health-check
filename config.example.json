@@ -1,0 +1,20 @@
+{
+  "TenantId": "YOUR_TENANT_ID",
+  "ApplicationId": "YOUR_APPLICATION_CLIENT_ID",
+  "ClientSecret": "PASTE_CLIENT_SECRET_HERE",
+  "WarningDays": 30,
+  "CriticalDays": 7,
+  "TokenSyncWarningHours": 72,
+  "ConnectorHeartbeatWarningHours": 24,
+  "InactiveDays": 30,
+  "NonCompliantWarningPercent": 10,
+  "IncludeAppRegistrationCredentials": true,
+  "IncludePolicyHygiene": true,
+  "GraphBaseUrl": "https://graph.microsoft.com/v1.0",
+  "GraphBetaBaseUrl": "https://graph.microsoft.com/beta",
+  "LoginBaseUrl": "https://login.microsoftonline.com",
+  "RequestTimeoutSeconds": 120,
+  "GraphMaxRetryCount": 5,
+  "ProxyUrl": "",
+  "UseDefaultProxyCredentials": false
+}
