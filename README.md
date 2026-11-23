@@ -58,7 +58,7 @@ Get-ChildItem -Recurse | Unblock-File
 ```
 
 1. Create the app registration and fill in `config.json`: see the [app registration guide](docs/APP_REGISTRATION.md).
-2. Run `.\Invoke-TenantHealthCheck.ps1` again (or double-click `Start-Report.bat`). The report opens in your browser.
+2. Run `.\Invoke-TenantHealthCheck.ps1` again (or double-click `Start-Report.bat`). The report opens in your browser
 
 ## Permissions
 
@@ -112,7 +112,7 @@ Each run writes a new timestamped folder in `reports/` with `report.html` and `r
 ## Notes
 
 - Some checks use the Microsoft Graph **beta** endpoint (ADE tokens, Managed Google Play, NDES connectors, Autopilot settings, settings catalog). Microsoft can change beta APIs without notice; if one breaks, that check shows *Couldn't check* and the rest still runs.
-- The report shows only the first 8 characters of your tenant ID, so screenshots are easier to share. It still contains Apple IDs and app names: review before sharing outside your team.
+- The report shows only the first 8 characters of your tenant ID, so screenshots are easier to share. It still contains Apple IDs and app names: review before sharing outside your team
 
 ## Development
 
